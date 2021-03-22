@@ -1,13 +1,70 @@
-import React from 'react';
-import { StyleSheet, Text, View, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, Text, View, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
+import * as Location from 'expo-location';
+import AppLoading from 'expo-app-loading';
 
 import mapMarker from '../images/marker.png';
 
+import api from '../services/api';
+
+interface BarItem {
+	id: number;
+	name: string;
+	latitude: number;
+	longitude: number;
+}
+
 export default function BaresMap() {
 	const navigation = useNavigation();
+	const [bars, setBars] = useState<BarItem[]>([]);
+	const [isLatitude, setIsLatitude] = useState(0);
+	const [isLongitude, setIsLongitude] = useState(0);
+	const [errorMsg, setErrorMsg] = useState<string>('');
+
+	useEffect(
+		() => {
+			handleMyLocalization();
+			console.log('LOC', isLatitude);
+		},
+		[isLatitude, isLongitude]
+	);
+
+	useFocusEffect(() => {
+		api.get('bares').then((response) => {
+			setBars(response.data);
+		});
+	});
+
+	async function handleMyLocalization() {
+		let { status } = await Location.requestPermissionsAsync();
+		if (status !== 'granted') {
+			setErrorMsg('Permission to access location was denied');
+			return;
+		}
+
+		let location = await Location.getCurrentPositionAsync({});
+		const { latitude, longitude } = location.coords;
+
+		console.log(location.coords);
+		console.log(typeof latitude === 'number');
+		setIsLatitude(latitude);
+		setIsLongitude(longitude);
+	}
+
+	function handleNavigateBarDetails(id: number) {
+		navigation.navigate('BaresDetails', { id });
+	}
+
+	if (!isLatitude) {
+		return (
+			<View style={styles.containerIndicator}>
+				<ActivityIndicator size="large" color="#f00" />
+			</View>
+		);
+	}
 
 	return (
 		<View style={styles.container}>
@@ -15,33 +72,39 @@ export default function BaresMap() {
 				style={styles.map}
 				provider={PROVIDER_GOOGLE}
 				initialRegion={{
-					latitude: -15.824372,
-					longitude: -48.094439,
+
+					latitude: isLatitude,
+					longitude: isLongitude,
 					latitudeDelta: 0.008,
 					longitudeDelta: 0.008
 				}}
 			>
-				<Marker
-					icon={mapMarker}
-					calloutAnchor={{
-						x: 2.4,
-						y: 0.9
-					}}
-					coordinate={{
-						latitude: -15.824372,
-						longitude: -48.094439
-					}}
-				>
-					<Callout tooltip onPress={() => navigation.navigate('BaresDetails')}>
-						<View style={styles.calloutContainer}>
-							<Text style={styles.calloutText}>Seu Zé</Text>
-						</View>
-					</Callout>
-				</Marker>
+				{bars.map((bar) => {
+					return (
+						<Marker
+							key={bar.id}
+							icon={mapMarker}
+							calloutAnchor={{
+								x: 2.4,
+								y: 0.9
+							}}
+							coordinate={{
+								latitude: bar.latitude,
+								longitude: bar.longitude
+							}}
+						>
+							<Callout tooltip onPress={() => handleNavigateBarDetails(bar.id)}>
+								<View style={styles.calloutContainer}>
+									<Text style={styles.calloutText}>{bar.name}</Text>
+								</View>
+							</Callout>
+						</Marker>
+					);
+				})}
 			</MapView>
 
 			<View style={styles.footer}>
-				<Text style={styles.footerText}>2 Bares encontrados</Text>
+				<Text style={styles.footerText}>{bars.length} Bares encontrados</Text>
 
 				<TouchableOpacity
 					style={styles.createBarButton}
@@ -57,6 +120,12 @@ export default function BaresMap() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1
+	},
+
+	containerIndicator: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: 'center'
 	},
 
 	map: {

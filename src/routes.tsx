@@ -21,7 +21,7 @@ export default function Routes() {
 					component={BaresDetails}
 					options={{
 						headerShown: true,
-						header: () => <Header showCancel={false} title="Bar" />
+						header: () => <Header showCancel={false} title="Informações" />
 					}}
 				/>
 				<Screen
@@ -29,7 +29,7 @@ export default function Routes() {
 					component={RegisterBar}
 					options={{
 						headerShown: true,
-						header: () => <Header title="Selecione no mapa" />
+						header: () => <Header title="Cadastre-se" />
 					}}
 				/>
 				<Screen
@@ -37,7 +37,7 @@ export default function Routes() {
 					component={SelectMapPosition}
 					options={{
 						headerShown: true,
-						header: () => <Header title="Cadastre" />
+						header: () => <Header title="Selecione no mapa" />
 					}}
 				/>
 			</Navigator>
